@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"os"
 	"time"
 
@@ -30,4 +31,23 @@ func GenerateAccessToken(userId string) (string, error) {
 
 func GenerateRefreshToken(userId string) (string, error) {
 	return GenerateToken(userId, 7*24*time.Hour)
+}
+
+func ParseToken(tokenStr string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return jwtSecret, nil
+	})
+	if !token.Valid || err != nil {
+		return nil, errors.New("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid claims type")
+	}
+
+	return claims, nil
 }
